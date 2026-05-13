@@ -125,16 +125,24 @@ class DataCollectorNode(Node):
             return None
 
     def _preview_callback(self):
-        """定时打印当前帧的ChArUco检测状态。"""
-        if self.latest_image is None or self.camera_matrix is None:
+        """定时打印当前帧的ChArUco检测状态（区分ArUco与ChArUco两层）。"""
+        if self.latest_image is None:
             return
-        corners, ids = self.charuco.detect(self.latest_image)
-        if corners is None:
-            self.get_logger().info('[PREVIEW] No ChArUco corners detected.')
+        n_aruco, n_charuco = self.charuco.detect_diagnostic(self.latest_image)
+        if n_aruco == 0:
+            self.get_logger().warn(
+                '[PREVIEW] No ArUco markers detected. '
+                'Likely WRONG DICTIONARY. Run: '
+                'ros2 run calib_realman diagnose_charuco --ros-args '
+                f'-p camera_topic:={self.image_sub.topic_name}')
+        elif n_charuco < 6:
+            self.get_logger().warn(
+                f'[PREVIEW] ArUco markers={n_aruco} but ChArUco corners={n_charuco} (<6). '
+                'Likely WRONG board geometry (squares_x/squares_y) or partial occlusion.')
         else:
             self.get_logger().info(
-                f'[PREVIEW] Detected {len(corners)} corners '
-                f'(need >=6 for capture).')
+                f'[PREVIEW] ArUco={n_aruco}, ChArUco corners={n_charuco}. '
+                'Ready to capture.')
 
     def _capture_callback(self, request, response):
         """触发一次数据采集。"""

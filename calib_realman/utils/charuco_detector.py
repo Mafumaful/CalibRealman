@@ -71,6 +71,25 @@ class CharucoDetector:
 
         return charuco_corners, charuco_ids
 
+    def detect_diagnostic(self, image):
+        """诊断模式：返回 ArUco 标记数和 ChArUco 角点数，用于调试。
+
+        Returns:
+            (num_aruco_markers, num_charuco_corners)
+        """
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+        # 先检测原始 ArUco 标记
+        aruco_corners, aruco_ids, _ = self.aruco_detector.detectMarkers(gray)
+        n_aruco = 0 if aruco_ids is None else len(aruco_ids)
+
+        # 再检测 ChArUco 角点
+        charuco_corners, charuco_ids, _, _ = (
+            self.charuco_detector.detectBoard(image)
+        )
+        n_charuco = 0 if charuco_corners is None else len(charuco_corners)
+
+        return n_aruco, n_charuco
+
     def estimate_pose(self, charuco_corners, charuco_ids, camera_matrix, dist_coeffs):
         """估计标定板相对于相机的位姿。
 

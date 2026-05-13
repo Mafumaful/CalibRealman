@@ -26,6 +26,7 @@ setup(
             'calibration = calib_realman.calibration_node:main',
             'global_cam = calib_realman.global_cam_node:main',
             'tf_publisher = calib_realman.tf_publisher_node:main',
+            'diagnose_charuco = calib_realman.diagnose_charuco_node:main',
             'keyboard_trigger = scripts.keyboard_trigger:main',
         ],
     },
