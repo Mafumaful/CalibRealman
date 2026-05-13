@@ -53,6 +53,9 @@ class ArmDriverNode(Node):
 
         self.declare_parameter('rate', 30.0)  # Hz
         self.declare_parameter('log_level', 3)  # 0=debug 1=info 2=warn 3=error
+        # 睿尔曼欧拉角约定: 常见取值 'xyz'(外旋) / 'XYZ'(内旋) / 'zyx' / 'ZYX'
+        # 睿尔曼官方文档通常是 ZYX 外旋（RPY: roll-pitch-yaw）
+        self.declare_parameter('euler_convention', 'xyz')
 
         ip = self.get_parameter(f'{prefix}.ip').value
         port = self.get_parameter(f'{prefix}.port').value
@@ -60,6 +63,7 @@ class ArmDriverNode(Node):
         self.ee_frame = self.get_parameter(f'{prefix}.ee_frame').value
         rate = self.get_parameter('rate').value
         log_level = self.get_parameter('log_level').value
+        self.euler_convention = self.get_parameter('euler_convention').value
 
         self._print_loaded_params(ip, port, rate)
 
@@ -141,8 +145,9 @@ class ArmDriverNode(Node):
         # 位姿: [x, y, z, rx, ry, rz] (m + rad)
         pose = state['pose']
         x, y, z, rx, ry, rz = pose
-        # 睿尔曼使用 XYZ 外旋欧拉角 (scipy 'xyz' = extrinsic)
-        quat = Rotation.from_euler('xyz', [rx, ry, rz]).as_quat()
+        # 按配置的欧拉角约定转四元数
+        quat = Rotation.from_euler(
+            self.euler_convention, [rx, ry, rz]).as_quat()
 
         t = TransformStamped()
         t.header.stamp = now

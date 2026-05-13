@@ -28,6 +28,7 @@ setup(
             'tf_publisher = calib_realman.tf_publisher_node:main',
             'arm_driver = calib_realman.arm_driver_node:main',
             'diagnose_charuco = calib_realman.diagnose_charuco_node:main',
+            'diagnose_dataset = calib_realman.diagnose_dataset:main',
             'keyboard_trigger = scripts.keyboard_trigger:main',
         ],
     },
