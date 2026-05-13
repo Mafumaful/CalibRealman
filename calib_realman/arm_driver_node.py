@@ -166,9 +166,13 @@ class ArmDriverNode(Node):
                         float(rx), float(ry), float(rz)]
         self.raw_pose_pub.publish(raw_msg)
 
-        # 按配置的欧拉角约定转四元数
-        quat = Rotation.from_euler(
-            self.euler_convention, [rx, ry, rz]).as_quat()
+        # 按配置的约定转四元数
+        # 特殊值 'rotvec' = 当成旋转向量 (axis-angle) 而非欧拉角
+        if self.euler_convention == 'rotvec':
+            quat = Rotation.from_rotvec([rx, ry, rz]).as_quat()
+        else:
+            quat = Rotation.from_euler(
+                self.euler_convention, [rx, ry, rz]).as_quat()
 
         t = TransformStamped()
         t.header.stamp = now

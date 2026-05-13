@@ -17,7 +17,9 @@ from .utils.transform_utils import (
 
 
 # auto 模式尝试的约定列表（小写=外旋，大写=内旋）
-AUTO_CONVENTIONS = ['xyz', 'zyx', 'XYZ', 'ZYX', 'xzy', 'yxz', 'yzx', 'zxy']
+# 'rotvec' = 旋转向量（axis-angle，而非欧拉角），很多机械臂实际用这个格式
+AUTO_CONVENTIONS = ['rotvec', 'xyz', 'zyx', 'XYZ', 'ZYX',
+                    'xzy', 'yxz', 'yzx', 'zxy']
 
 
 class CalibrationNode(Node):
@@ -96,7 +98,10 @@ class CalibrationNode(Node):
 
     def _build_pose_lists(self, samples, euler_conv):
         """根据 euler_conv 构建手眼标定输入。
-           euler_conv 为 None/'' 时用 ee_pose_matrix。"""
+           euler_conv:
+             - None/'' : 用 ee_pose_matrix
+             - 'rotvec': raw_pose 的 rx/ry/rz 当旋转向量（axis-angle）
+             - 其他    : 传给 scipy.Rotation.from_euler 作为欧拉约定"""
         R_g2b, t_g2b, R_t2c, t_t2c = [], [], [], []
         skipped = 0
         for s in samples:
@@ -106,7 +111,11 @@ class CalibrationNode(Node):
                     skipped += 1
                     continue
                 x, y, z, rx, ry, rz = raw
-                R = Rotation.from_euler(euler_conv, [rx, ry, rz]).as_matrix()
+                if euler_conv == 'rotvec':
+                    R = Rotation.from_rotvec([rx, ry, rz]).as_matrix()
+                else:
+                    R = Rotation.from_euler(
+                        euler_conv, [rx, ry, rz]).as_matrix()
                 ee_mat = np.eye(4)
                 ee_mat[:3, :3] = R
                 ee_mat[:3, 3] = [x, y, z]
