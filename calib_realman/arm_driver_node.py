@@ -79,7 +79,7 @@ class ArmDriverNode(Node):
         self.timer = self.create_timer(1.0 / rate, self._poll_callback)
         self.get_logger().info(
             f'Polling arm state at {rate} Hz, '
-            f'publishing TF {base_frame} -> {ee_frame}')
+            f'publishing TF {self.base_frame} -> {self.ee_frame}')
 
     def _print_loaded_params(self, ip, port, rate):
         lines = [
