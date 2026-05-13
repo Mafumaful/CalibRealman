@@ -1,10 +1,14 @@
-"""数据采集Launch文件。通过arm_name参数选择采集哪个臂。"""
+"""数据采集Launch文件。通过arm_name参数选择采集哪个臂。
+
+注意: keyboard_trigger 需要在单独终端运行（需要TTY）:
+    ros2 run calib_realman keyboard_trigger
+"""
 
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 
 
@@ -26,12 +30,6 @@ def generate_launch_description():
                 charuco_config,
                 {'arm_name': LaunchConfiguration('arm_name')},
             ],
-            output='screen',
-        ),
-
-        # 键盘触发节点
-        ExecuteProcess(
-            cmd=['ros2', 'run', 'calib_realman', 'keyboard_trigger'],
             output='screen',
         ),
     ])

@@ -20,14 +20,14 @@ class CalibrationNode(Node):
         super().__init__('calibration')
 
         self.declare_parameter('arm_name', 'arm1')
-        self.declare_parameter('method', 'PARK')
-        self.declare_parameter('data_dir', 'calibration_data')
-        self.declare_parameter('results_dir', 'results')
+        self.declare_parameter('calibration.method', 'PARK')
+        self.declare_parameter('calibration.output_dir', 'calibration_data')
+        self.declare_parameter('calibration.results_dir', 'results')
 
         self.arm_name = self.get_parameter('arm_name').value
-        self.method = self.get_parameter('method').value
-        self.data_dir = self.get_parameter('data_dir').value
-        self.results_dir = self.get_parameter('results_dir').value
+        self.method = self.get_parameter('calibration.method').value
+        self.data_dir = self.get_parameter('calibration.output_dir').value
+        self.results_dir = self.get_parameter('calibration.results_dir').value
 
         os.makedirs(self.results_dir, exist_ok=True)
 

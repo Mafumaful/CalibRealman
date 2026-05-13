@@ -21,12 +21,15 @@ class GlobalCamNode(Node):
     def __init__(self):
         super().__init__('global_cam_calibration')
 
-        self.declare_parameter('camera_topic', '/global_camera/color/image_raw')
-        self.declare_parameter('camera_info_topic', '/global_camera/color/camera_info')
-        self.declare_parameter('results_dir', 'results')
+        self.declare_parameter('global_camera.camera_topic',
+                               '/camera_m/color/image_raw')
+        self.declare_parameter('global_camera.camera_info_topic',
+                               '/camera_m/color/camera_info')
+        self.declare_parameter('calibration.results_dir', 'results')
         self.declare_parameter('num_frames', 30)
         # 标定板在世界坐标系中的位姿 [x,y,z,qx,qy,qz,qw]
-        self.declare_parameter('board_to_world', [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0])
+        self.declare_parameter('world_frame.board_to_world',
+                               [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0])
         # ChArUco参数
         self.declare_parameter('squares_x', 5)
         self.declare_parameter('squares_y', 7)
@@ -34,11 +37,11 @@ class GlobalCamNode(Node):
         self.declare_parameter('marker_length', 0.03)
         self.declare_parameter('dictionary', 'DICT_4X4_50')
 
-        camera_topic = self.get_parameter('camera_topic').value
-        camera_info_topic = self.get_parameter('camera_info_topic').value
-        self.results_dir = self.get_parameter('results_dir').value
+        camera_topic = self.get_parameter('global_camera.camera_topic').value
+        camera_info_topic = self.get_parameter('global_camera.camera_info_topic').value
+        self.results_dir = self.get_parameter('calibration.results_dir').value
         self.num_frames = self.get_parameter('num_frames').value
-        board_to_world_param = self.get_parameter('board_to_world').value
+        board_to_world_param = self.get_parameter('world_frame.board_to_world').value
 
         os.makedirs(self.results_dir, exist_ok=True)
 

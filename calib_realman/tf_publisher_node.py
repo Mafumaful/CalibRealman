@@ -15,19 +15,19 @@ class TFPublisherNode(Node):
     def __init__(self):
         super().__init__('tf_publisher')
 
-        self.declare_parameter('results_dir', 'results')
+        self.declare_parameter('calibration.results_dir', 'results')
         # 世界坐标系定义 [x,y,z,qx,qy,qz,qw]
         self.declare_parameter(
-            'arm1_base_to_world', [0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+            'world_frame.arm1_base_to_world', [0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
         self.declare_parameter(
-            'arm2_base_to_world', [-0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+            'world_frame.arm2_base_to_world', [-0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
         self.declare_parameter(
-            'board_to_world', [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0])
+            'world_frame.board_to_world', [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0])
 
-        self.results_dir = self.get_parameter('results_dir').value
-        arm1_param = self.get_parameter('arm1_base_to_world').value
-        arm2_param = self.get_parameter('arm2_base_to_world').value
-        board_param = self.get_parameter('board_to_world').value
+        self.results_dir = self.get_parameter('calibration.results_dir').value
+        arm1_param = self.get_parameter('world_frame.arm1_base_to_world').value
+        arm2_param = self.get_parameter('world_frame.arm2_base_to_world').value
+        board_param = self.get_parameter('world_frame.board_to_world').value
 
         self.broadcaster = StaticTransformBroadcaster(self)
         transforms = []

@@ -1,8 +1,11 @@
-"""键盘触发脚本：按空格键触发数据采集，按s保存数据集，按q退出。"""
+"""键盘触发脚本：按空格键触发数据采集，按s保存数据集，按q退出。
+
+必须在真实终端 (TTY) 中运行，例如:
+    ros2 run calib_realman keyboard_trigger
+不能通过 launch 的 ExecuteProcess 启动（无 TTY）。
+"""
 
 import sys
-import termios
-import tty
 
 import rclpy
 from rclpy.node import Node
@@ -28,7 +31,7 @@ class KeyboardTrigger(Node):
             self.get_logger().error(f'Service {name} not available.')
             return
         future = client.call_async(Trigger.Request())
-        rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
         if future.result() is not None:
             result = future.result()
             if result.success:
@@ -40,7 +43,9 @@ class KeyboardTrigger(Node):
 
 
 def get_key():
-    """读取单个按键（Linux终端）。"""
+    """读取单个按键（Linux终端，需要TTY）。"""
+    import termios
+    import tty
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
     try:
@@ -52,6 +57,13 @@ def get_key():
 
 
 def main(args=None):
+    # TTY 检查
+    if not sys.stdin.isatty():
+        print('[ERROR] keyboard_trigger requires a real TTY.', file=sys.stderr)
+        print('Please run it directly in a terminal:', file=sys.stderr)
+        print('    ros2 run calib_realman keyboard_trigger', file=sys.stderr)
+        sys.exit(1)
+
     rclpy.init(args=args)
     node = KeyboardTrigger()
 

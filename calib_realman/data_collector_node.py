@@ -22,12 +22,19 @@ class DataCollectorNode(Node):
     def __init__(self):
         super().__init__('data_collector')
 
-        # 参数声明
+        # 先声明 arm_name，根据它读取对应的相机/坐标系参数
         self.declare_parameter('arm_name', 'arm1')
-        self.declare_parameter('camera_topic', '/arm1/camera/color/image_raw')
-        self.declare_parameter('camera_info_topic', '/arm1/camera/color/camera_info')
-        self.declare_parameter('base_frame', 'arm1_base_link')
-        self.declare_parameter('ee_frame', 'arm1_ee_link')
+        self.arm_name = self.get_parameter('arm_name').value
+
+        # 嵌套参数: <arm_name>.camera_topic 等
+        prefix = self.arm_name
+        self.declare_parameter(f'{prefix}.camera_topic',
+                               f'/camera_l/color/image_raw')
+        self.declare_parameter(f'{prefix}.camera_info_topic',
+                               f'/camera_l/color/camera_info')
+        self.declare_parameter(f'{prefix}.base_frame', f'{prefix}_base_link')
+        self.declare_parameter(f'{prefix}.ee_frame', f'{prefix}_ee_link')
+
         self.declare_parameter('output_dir', 'calibration_data')
         # ChArUco参数
         self.declare_parameter('squares_x', 5)
@@ -37,11 +44,10 @@ class DataCollectorNode(Node):
         self.declare_parameter('dictionary', 'DICT_4X4_50')
 
         # 获取参数
-        self.arm_name = self.get_parameter('arm_name').value
-        camera_topic = self.get_parameter('camera_topic').value
-        camera_info_topic = self.get_parameter('camera_info_topic').value
-        self.base_frame = self.get_parameter('base_frame').value
-        self.ee_frame = self.get_parameter('ee_frame').value
+        camera_topic = self.get_parameter(f'{prefix}.camera_topic').value
+        camera_info_topic = self.get_parameter(f'{prefix}.camera_info_topic').value
+        self.base_frame = self.get_parameter(f'{prefix}.base_frame').value
+        self.ee_frame = self.get_parameter(f'{prefix}.ee_frame').value
         output_base = self.get_parameter('output_dir').value
 
         # 输出目录
