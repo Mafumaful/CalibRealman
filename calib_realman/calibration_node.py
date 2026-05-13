@@ -23,11 +23,13 @@ class CalibrationNode(Node):
         self.declare_parameter('calibration.method', 'PARK')
         self.declare_parameter('calibration.output_dir', 'calibration_data')
         self.declare_parameter('calibration.results_dir', 'results')
+        self.declare_parameter('calibration.min_corners', 0)  # 0 = 不过滤
 
         self.arm_name = self.get_parameter('arm_name').value
         self.method = self.get_parameter('calibration.method').value
         self.data_dir = self.get_parameter('calibration.output_dir').value
         self.results_dir = self.get_parameter('calibration.results_dir').value
+        self.min_corners = self.get_parameter('calibration.min_corners').value
 
         os.makedirs(self.results_dir, exist_ok=True)
 
@@ -72,6 +74,22 @@ class CalibrationNode(Node):
             response.success = False
             response.message = f'Need at least 3 samples, got {len(samples)}'
             return response
+
+        # 按最小角点数过滤
+        if self.min_corners > 0:
+            before = len(samples)
+            samples = [s for s in samples
+                       if s.get('corners_detected', 0) >= self.min_corners]
+            after = len(samples)
+            self.get_logger().info(
+                f'Filtered samples by min_corners={self.min_corners}: '
+                f'{before} -> {after}')
+            if after < 3:
+                response.success = False
+                response.message = (
+                    f'After filter only {after} samples remain (<3). '
+                    f'Lower min_corners or recapture.')
+                return response
 
         # 准备数据
         R_gripper2base_list = []
