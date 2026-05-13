@@ -34,9 +34,26 @@ class CalibrationNode(Node):
         self.calibrate_srv = self.create_service(
             Trigger, '~/run_calibration', self._calibrate_callback)
 
+        self._print_loaded_params()
+
         self.get_logger().info(
             f'Calibration node ready for [{self.arm_name}]. '
             f'Call ~/run_calibration to compute.')
+
+    def _print_loaded_params(self):
+        """启动时打印所有加载的配置参数。"""
+        lines = [
+            '=' * 60,
+            f'  Calibration Node Loaded Parameters [{self.arm_name}]',
+            '=' * 60,
+            f'  arm_name     : {self.arm_name}',
+            f'  method       : {self.method}',
+            f'  data_dir     : {self.data_dir}',
+            f'  results_dir  : {self.results_dir}',
+            '=' * 60,
+        ]
+        for line in lines:
+            self.get_logger().info(line)
 
     def _calibrate_callback(self, request, response):
         """执行手眼标定计算。"""

@@ -29,6 +29,8 @@ class TFPublisherNode(Node):
         arm2_param = self.get_parameter('world_frame.arm2_base_to_world').value
         board_param = self.get_parameter('world_frame.board_to_world').value
 
+        self._print_loaded_params(arm1_param, arm2_param, board_param)
+
         self.broadcaster = StaticTransformBroadcaster(self)
         transforms = []
 
@@ -97,6 +99,21 @@ class TFPublisherNode(Node):
         t.transform.rotation.z = float(quaternion[2])
         t.transform.rotation.w = float(quaternion[3])
         return t
+
+    def _print_loaded_params(self, arm1_param, arm2_param, board_param):
+        """启动时打印所有加载的配置参数。"""
+        lines = [
+            '=' * 60,
+            '  TF Publisher Loaded Parameters',
+            '=' * 60,
+            f'  results_dir           : {self.results_dir}',
+            f'  arm1_base_to_world    : {arm1_param}',
+            f'  arm2_base_to_world    : {arm2_param}',
+            f'  board_to_world        : {board_param}',
+            '=' * 60,
+        ]
+        for line in lines:
+            self.get_logger().info(line)
 
 
 def main(args=None):

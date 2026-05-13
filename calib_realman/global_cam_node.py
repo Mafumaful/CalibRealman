@@ -71,7 +71,31 @@ class GlobalCamNode(Node):
         self.calibrate_srv = self.create_service(
             Trigger, '~/calibrate_global', self._calibrate_callback)
 
+        self._print_loaded_params(camera_topic, camera_info_topic, board_to_world_param)
+
         self.get_logger().info('Global camera calibration node ready.')
+
+    def _print_loaded_params(self, camera_topic, camera_info_topic, board_to_world_param):
+        """启动时打印所有加载的配置参数。"""
+        lines = [
+            '=' * 60,
+            '  Global Camera Node Loaded Parameters',
+            '=' * 60,
+            f'  camera_topic      : {camera_topic}',
+            f'  camera_info_topic : {camera_info_topic}',
+            f'  results_dir       : {self.results_dir}',
+            f'  num_frames        : {self.num_frames}',
+            f'  board_to_world    : {board_to_world_param}',
+            '  --- ChArUco Board ---',
+            f'  squares_x         : {self.get_parameter("squares_x").value}',
+            f'  squares_y         : {self.get_parameter("squares_y").value}',
+            f'  square_length (m) : {self.get_parameter("square_length").value}',
+            f'  marker_length (m) : {self.get_parameter("marker_length").value}',
+            f'  dictionary        : {self.get_parameter("dictionary").value}',
+            '=' * 60,
+        ]
+        for line in lines:
+            self.get_logger().info(line)
 
     def _image_callback(self, msg):
         self.latest_image = self.bridge.imgmsg_to_cv2(msg, 'bgr8')

@@ -96,9 +96,38 @@ class DataCollectorNode(Node):
             self.preview_timer = self.create_timer(
                 1.0 / preview_rate, self._preview_callback)
 
+        # 启动时打印所有加载的参数
+        self._print_loaded_params(
+            camera_topic, camera_info_topic, output_base, preview_rate)
+
         self.get_logger().info(
             f'Data collector ready for [{self.arm_name}]. '
             f'Call ~/capture to collect samples.')
+
+    def _print_loaded_params(self, camera_topic, camera_info_topic,
+                             output_base, preview_rate):
+        """启动时打印所有加载的配置参数，便于确认。"""
+        lines = [
+            '=' * 60,
+            f'  Data Collector Loaded Parameters [{self.arm_name}]',
+            '=' * 60,
+            f'  arm_name          : {self.arm_name}',
+            f'  camera_topic      : {camera_topic}',
+            f'  camera_info_topic : {camera_info_topic}',
+            f'  base_frame        : {self.base_frame}',
+            f'  ee_frame          : {self.ee_frame}',
+            f'  output_dir        : {output_base}/{self.arm_name}',
+            f'  preview_rate      : {preview_rate} Hz',
+            '  --- ChArUco Board ---',
+            f'  squares_x         : {self.get_parameter("squares_x").value}',
+            f'  squares_y         : {self.get_parameter("squares_y").value}',
+            f'  square_length (m) : {self.get_parameter("square_length").value}',
+            f'  marker_length (m) : {self.get_parameter("marker_length").value}',
+            f'  dictionary        : {self.get_parameter("dictionary").value}',
+            '=' * 60,
+        ]
+        for line in lines:
+            self.get_logger().info(line)
 
     def _image_callback(self, msg):
         self.latest_image = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
