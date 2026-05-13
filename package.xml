@@ -21,6 +21,7 @@
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
+  <!-- 睿尔曼机械臂SDK，需通过 pip install Robotic_Arm 安装 -->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

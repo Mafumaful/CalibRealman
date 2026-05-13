@@ -33,11 +33,22 @@ world (两臂中点)
 - 编辑 `config/charuco_board.yaml` 填写标定板实际参数
 - 编辑 `config/calibration_params.yaml` 根据实际话题名调整，填写臂间距
 
-### 2. 启动相机与机械臂（用户自行启动）
+### 2. 启动相机与机械臂
 
-用户自行启动三个 RealSense 相机和两个 Realman 驱动，确保：
-- `/camera_l/*`、`/camera_r/*`、`/camera_m/*` 话题可用
-- TF 树可查询 `arm1_base_link -> arm1_ee_link` 和 `arm2_base_link -> arm2_ee_link`
+用户自行启动三个 RealSense 相机（确保 `/camera_l/*`、`/camera_r/*`、`/camera_m/*` 话题可用）。
+
+启动两个机械臂驱动（发布 `arm*_base_link -> arm*_ee_link` TF），在两个终端分别运行：
+```bash
+ros2 launch calib_realman arm_driver.launch.py arm_name:=arm1
+ros2 launch calib_realman arm_driver.launch.py arm_name:=arm2
+```
+
+IP 在 `config/calibration_params.yaml` 中配置（默认 arm1=192.168.1.18, arm2=192.168.1.19）。
+
+需先安装 SDK：
+```bash
+pip install Robotic_Arm
+```
 
 ### 3. 数据采集
 

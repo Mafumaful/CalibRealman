@@ -1,4 +1,4 @@
-charuco_board:
+/**:
   ros__parameters:
     # TODO: 用户填写实际标定板参数
     squares_x: 5           # 棋盘格列数

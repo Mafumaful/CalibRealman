@@ -35,7 +35,7 @@ class DataCollectorNode(Node):
         self.declare_parameter(f'{prefix}.base_frame', f'{prefix}_base_link')
         self.declare_parameter(f'{prefix}.ee_frame', f'{prefix}_ee_link')
 
-        self.declare_parameter('output_dir', 'calibration_data')
+        self.declare_parameter('calibration.output_dir', 'calibration_data')
         # ChArUco参数
         self.declare_parameter('squares_x', 5)
         self.declare_parameter('squares_y', 7)
@@ -48,7 +48,7 @@ class DataCollectorNode(Node):
         camera_info_topic = self.get_parameter(f'{prefix}.camera_info_topic').value
         self.base_frame = self.get_parameter(f'{prefix}.base_frame').value
         self.ee_frame = self.get_parameter(f'{prefix}.ee_frame').value
-        output_base = self.get_parameter('output_dir').value
+        output_base = self.get_parameter('calibration.output_dir').value
 
         # 输出目录
         self.output_dir = os.path.join(output_base, self.arm_name)
