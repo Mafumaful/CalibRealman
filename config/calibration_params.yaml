@@ -1,0 +1,42 @@
+/**:
+  ros__parameters:
+    # --- 机械臂配置 ---
+    arm1:
+      camera_topic: "/arm1/camera/color/image_raw"
+      camera_info_topic: "/arm1/camera/color/camera_info"
+      base_frame: "arm1_base_link"
+      ee_frame: "arm1_ee_link"
+      camera_frame: "arm1_cam_link"
+    arm2:
+      camera_topic: "/arm2/camera/color/image_raw"
+      camera_info_topic: "/arm2/camera/color/camera_info"
+      base_frame: "arm2_base_link"
+      ee_frame: "arm2_ee_link"
+      camera_frame: "arm2_cam_link"
+
+    # --- 全局相机配置 ---
+    global_camera:
+      camera_topic: "/global_camera/color/image_raw"
+      camera_info_topic: "/global_camera/color/camera_info"
+      camera_frame: "global_cam_link"
+
+    # --- 标定参数 ---
+    calibration:
+      method: "PARK"         # TSAI, PARK, HORAUD, DANIILIDIS, ANDREFF
+      min_samples: 15        # 最少采集样本数
+      output_dir: "calibration_data"
+      results_dir: "results"
+
+    # --- 世界坐标系定义 ---
+    # 原点在两臂base中点，X轴从arm2指向arm1，Z轴向上
+    # 格式: [x, y, z, qx, qy, qz, qw]
+    world_frame:
+      arm1_base_to_world: [0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+      arm2_base_to_world: [-0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+      board_to_world: [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0]
+
+    # --- RealSense相机序列号 ---
+    camera_serial_numbers:
+      arm1: ""    # TODO: 填写实际序列号
+      arm2: ""
+      global: ""

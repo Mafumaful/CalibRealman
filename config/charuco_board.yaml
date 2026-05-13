@@ -1,0 +1,8 @@
+charuco_board:
+  ros__parameters:
+    # TODO: 用户填写实际标定板参数
+    squares_x: 5           # 棋盘格列数
+    squares_y: 7           # 棋盘格行数
+    square_length: 0.04    # 方格边长 (米)
+    marker_length: 0.03    # ArUco标记边长 (米)
+    dictionary: "DICT_4X4_50"  # ArUco字典类型
