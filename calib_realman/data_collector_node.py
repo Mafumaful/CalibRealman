@@ -53,7 +53,9 @@ class DataCollectorNode(Node):
         # 输出目录
         self.output_dir = os.path.join(output_base, self.arm_name)
         self.images_dir = os.path.join(self.output_dir, 'images')
+        self.vis_dir = os.path.join(self.output_dir, 'vis')
         os.makedirs(self.images_dir, exist_ok=True)
+        os.makedirs(self.vis_dir, exist_ok=True)
 
         # ChArUco检测器
         self.charuco = CharucoDetector(
@@ -87,6 +89,13 @@ class DataCollectorNode(Node):
         self.save_srv = self.create_service(
             Trigger, '~/save_dataset', self._save_callback)
 
+        # 实时预览定时器（每秒打印一次当前帧角点检测情况）
+        self.declare_parameter('preview_rate', 1.0)
+        preview_rate = self.get_parameter('preview_rate').value
+        if preview_rate > 0:
+            self.preview_timer = self.create_timer(
+                1.0 / preview_rate, self._preview_callback)
+
         self.get_logger().info(
             f'Data collector ready for [{self.arm_name}]. '
             f'Call ~/capture to collect samples.')
@@ -114,6 +123,18 @@ class DataCollectorNode(Node):
         except Exception as e:
             self.get_logger().error(f'TF lookup failed: {e}')
             return None
+
+    def _preview_callback(self):
+        """定时打印当前帧的ChArUco检测状态。"""
+        if self.latest_image is None or self.camera_matrix is None:
+            return
+        corners, ids = self.charuco.detect(self.latest_image)
+        if corners is None:
+            self.get_logger().info('[PREVIEW] No ChArUco corners detected.')
+        else:
+            self.get_logger().info(
+                f'[PREVIEW] Detected {len(corners)} corners '
+                f'(need >=6 for capture).')
 
     def _capture_callback(self, request, response):
         """触发一次数据采集。"""
@@ -148,6 +169,18 @@ class DataCollectorNode(Node):
         img_path = os.path.join(self.images_dir, f'sample_{sample_id:03d}.png')
         cv2.imwrite(img_path, self.latest_image)
 
+        # 保存带角点标注的可视化图
+        vis = self.charuco.draw_detected(self.latest_image, corners, ids)
+        cv2.drawFrameAxes(
+            vis, self.camera_matrix, self.dist_coeffs,
+            rvec, tvec, 0.05)
+        vis_path = os.path.join(self.vis_dir, f'sample_{sample_id:03d}_vis.png')
+        cv2.imwrite(vis_path, vis)
+
+        # 计算标定板距离和姿态
+        distance = float(np.linalg.norm(tvec))
+        rvec_deg = np.degrees(np.linalg.norm(rvec))
+
         sample = {
             'sample_id': sample_id,
             'timestamp': datetime.now().isoformat(),
@@ -156,14 +189,20 @@ class DataCollectorNode(Node):
             'board_tvec': tvec.flatten().tolist(),
             'corners_detected': len(corners),
             'image_path': img_path,
+            'vis_path': vis_path,
         }
         self.samples.append(sample)
 
         response.success = True
         response.message = (
             f'Sample {sample_id} captured. '
-            f'Corners: {len(corners)}. Total samples: {len(self.samples)}')
+            f'Corners: {len(corners)}, '
+            f'Board dist: {distance:.3f}m, '
+            f'Rot: {rvec_deg:.1f}deg. '
+            f'Total: {len(self.samples)}')
         self.get_logger().info(response.message)
+        self.get_logger().info(f'  Image:  {img_path}')
+        self.get_logger().info(f'  Vis:    {vis_path}')
         return response
 
     def _save_callback(self, request, response):
