@@ -9,6 +9,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
+from std_msgs.msg import Float64MultiArray
 from std_srvs.srv import Trigger
 from cv_bridge import CvBridge
 import tf2_ros
@@ -71,6 +72,7 @@ class DataCollectorNode(Node):
         self.latest_image = None
         self.camera_matrix = None
         self.dist_coeffs = None
+        self.latest_raw_pose = None  # 睿尔曼原始 [x,y,z,rx,ry,rz]
         self.samples = []
 
         # TF
@@ -82,6 +84,10 @@ class DataCollectorNode(Node):
             Image, camera_topic, self._image_callback, 10)
         self.info_sub = self.create_subscription(
             CameraInfo, camera_info_topic, self._info_callback, 10)
+        # 订阅原始位姿（供后续用不同欧拉约定重算）
+        self.raw_pose_sub = self.create_subscription(
+            Float64MultiArray, f'/{self.arm_name}/raw_pose',
+            self._raw_pose_callback, 10)
 
         # 服务
         self.capture_srv = self.create_service(
@@ -137,6 +143,10 @@ class DataCollectorNode(Node):
             self.camera_matrix = np.array(msg.k).reshape(3, 3)
             self.dist_coeffs = np.array(msg.d)
             self.get_logger().info('Camera intrinsics received.')
+
+    def _raw_pose_callback(self, msg):
+        if len(msg.data) >= 6:
+            self.latest_raw_pose = list(msg.data[:6])
 
     def _get_ee_pose(self):
         """通过TF获取末端位姿 (base->ee)。"""
@@ -222,6 +232,9 @@ class DataCollectorNode(Node):
             'sample_id': sample_id,
             'timestamp': datetime.now().isoformat(),
             'ee_pose_matrix': ee_mat.tolist(),
+            # 原始睿尔曼位姿 [x,y,z,rx,ry,rz] (m + rad)，未做欧拉约定转换
+            # 标定时可指定 euler_convention 参数从这里重算 ee_pose_matrix
+            'raw_pose': self.latest_raw_pose,
             'board_rvec': rvec.flatten().tolist(),
             'board_tvec': tvec.flatten().tolist(),
             'corners_detected': len(corners),

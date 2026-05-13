@@ -8,6 +8,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
+from scipy.spatial.transform import Rotation
 
 from .utils.hand_eye_solver import solve_hand_eye, compute_reprojection_error
 from .utils.transform_utils import (
@@ -23,13 +24,17 @@ class CalibrationNode(Node):
         self.declare_parameter('calibration.method', 'PARK')
         self.declare_parameter('calibration.output_dir', 'calibration_data')
         self.declare_parameter('calibration.results_dir', 'results')
-        self.declare_parameter('calibration.min_corners', 0)  # 0 = 不过滤
+        self.declare_parameter('calibration.min_corners', 0)
+        # 若非空，从 raw_pose 用此约定重算 EE 位姿矩阵
+        # 可选: 'xyz'(外旋)、'XYZ'(内旋)、'zyx'、'ZYX' 等
+        self.declare_parameter('calibration.euler_convention', '')
 
         self.arm_name = self.get_parameter('arm_name').value
         self.method = self.get_parameter('calibration.method').value
         self.data_dir = self.get_parameter('calibration.output_dir').value
         self.results_dir = self.get_parameter('calibration.results_dir').value
         self.min_corners = self.get_parameter('calibration.min_corners').value
+        self.euler_conv = self.get_parameter('calibration.euler_convention').value
 
         os.makedirs(self.results_dir, exist_ok=True)
 
@@ -48,10 +53,13 @@ class CalibrationNode(Node):
             '=' * 60,
             f'  Calibration Node Loaded Parameters [{self.arm_name}]',
             '=' * 60,
-            f'  arm_name     : {self.arm_name}',
-            f'  method       : {self.method}',
-            f'  data_dir     : {self.data_dir}',
-            f'  results_dir  : {self.results_dir}',
+            f'  arm_name         : {self.arm_name}',
+            f'  method           : {self.method}',
+            f'  data_dir         : {self.data_dir}',
+            f'  results_dir      : {self.results_dir}',
+            f'  min_corners      : {self.min_corners} (0=off)',
+            f'  euler_convention : '
+            f'{repr(self.euler_conv) if self.euler_conv else "(use ee_pose_matrix)"}',
             '=' * 60,
         ]
         for line in lines:
@@ -97,9 +105,28 @@ class CalibrationNode(Node):
         R_target2cam_list = []
         t_target2cam_list = []
 
+        use_raw = bool(self.euler_conv)
+        if use_raw:
+            self.get_logger().info(
+                f'Rebuilding EE pose from raw_pose with euler_convention="{self.euler_conv}"')
+
+        skipped = 0
         for sample in samples:
-            # 末端位姿 (base->ee)
-            ee_mat = np.array(sample['ee_pose_matrix'])
+            # 末端位姿
+            if use_raw:
+                raw = sample.get('raw_pose')
+                if raw is None:
+                    skipped += 1
+                    continue
+                x, y, z, rx, ry, rz = raw
+                R = Rotation.from_euler(
+                    self.euler_conv, [rx, ry, rz]).as_matrix()
+                ee_mat = np.eye(4)
+                ee_mat[:3, :3] = R
+                ee_mat[:3, 3] = [x, y, z]
+            else:
+                ee_mat = np.array(sample['ee_pose_matrix'])
+
             R_gripper2base_list.append(ee_mat[:3, :3])
             t_gripper2base_list.append(ee_mat[:3, 3].reshape(3, 1))
 
@@ -108,6 +135,17 @@ class CalibrationNode(Node):
                 sample['board_rvec'], sample['board_tvec'])
             R_target2cam_list.append(board_mat[:3, :3])
             t_target2cam_list.append(board_mat[:3, 3].reshape(3, 1))
+
+        if use_raw and skipped > 0:
+            self.get_logger().warn(
+                f'{skipped} samples have no raw_pose (old dataset?), skipped.')
+
+        if len(R_gripper2base_list) < 3:
+            response.success = False
+            response.message = (
+                f'Only {len(R_gripper2base_list)} usable samples (<3). '
+                f'If using euler_convention, dataset must have raw_pose field.')
+            return response
 
         # 求解
         self.get_logger().info(

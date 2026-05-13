@@ -13,6 +13,7 @@ import math
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Float64MultiArray
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
 from scipy.spatial.transform import Rotation
@@ -107,6 +108,9 @@ class ArmDriverNode(Node):
         self.tf_broadcaster = TransformBroadcaster(self)
         self.joint_pub = self.create_publisher(
             JointState, f'/{self.arm_name}/joint_states', 10)
+        # 发布睿尔曼原始位姿 [x,y,z,rx,ry,rz] (m + rad, 未转约定)
+        self.raw_pose_pub = self.create_publisher(
+            Float64MultiArray, f'/{self.arm_name}/raw_pose', 10)
 
         # 定时轮询
         self.timer = self.create_timer(1.0 / rate, self._poll_callback)
@@ -145,6 +149,13 @@ class ArmDriverNode(Node):
         # 位姿: [x, y, z, rx, ry, rz] (m + rad)
         pose = state['pose']
         x, y, z, rx, ry, rz = pose
+
+        # 发布原始位姿（保留欧拉角，不做约定转换，供后续选择）
+        raw_msg = Float64MultiArray()
+        raw_msg.data = [float(x), float(y), float(z),
+                        float(rx), float(ry), float(rz)]
+        self.raw_pose_pub.publish(raw_msg)
+
         # 按配置的欧拉角约定转四元数
         quat = Rotation.from_euler(
             self.euler_convention, [rx, ry, rz]).as_quat()
