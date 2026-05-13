@@ -54,9 +54,11 @@ class ArmDriverNode(Node):
 
         self.declare_parameter('rate', 30.0)  # Hz
         self.declare_parameter('log_level', 3)  # 0=debug 1=info 2=warn 3=error
-        # 睿尔曼欧拉角约定: 常见取值 'xyz'(外旋) / 'XYZ'(内旋) / 'zyx' / 'ZYX'
-        # 睿尔曼官方文档通常是 ZYX 外旋（RPY: roll-pitch-yaw）
+        # 睿尔曼欧拉角约定: 'xyz'(外旋) / 'XYZ'(内旋) / 'zyx' / 'ZYX'
         self.declare_parameter('euler_convention', 'xyz')
+        # 位置缩放系数: 睿尔曼实际返回 mm，默认 0.001 转为米
+        # 如果你的固件确实返回 m，设为 1.0
+        self.declare_parameter('position_scale', 0.001)
 
         ip = self.get_parameter(f'{prefix}.ip').value
         port = self.get_parameter(f'{prefix}.port').value
@@ -65,6 +67,7 @@ class ArmDriverNode(Node):
         rate = self.get_parameter('rate').value
         log_level = self.get_parameter('log_level').value
         self.euler_convention = self.get_parameter('euler_convention').value
+        self.position_scale = self.get_parameter('position_scale').value
 
         self._print_loaded_params(ip, port, rate)
 
@@ -123,12 +126,15 @@ class ArmDriverNode(Node):
             '=' * 60,
             f'  Arm Driver Loaded Parameters [{self.arm_name}]',
             '=' * 60,
-            f'  arm_name    : {self.arm_name}',
-            f'  ip          : {ip}',
-            f'  port        : {port}',
-            f'  base_frame  : {self.base_frame}',
-            f'  ee_frame    : {self.ee_frame}',
-            f'  rate (Hz)   : {rate}',
+            f'  arm_name          : {self.arm_name}',
+            f'  ip                : {ip}',
+            f'  port              : {port}',
+            f'  base_frame        : {self.base_frame}',
+            f'  ee_frame          : {self.ee_frame}',
+            f'  rate (Hz)         : {rate}',
+            f'  euler_convention  : {self.euler_convention}',
+            f'  position_scale    : {self.position_scale} '
+            f'({"mm->m" if self.position_scale == 0.001 else "custom"})',
             '=' * 60,
         ]
         for line in lines:
@@ -146,11 +152,15 @@ class ArmDriverNode(Node):
 
         now = self.get_clock().now().to_msg()
 
-        # 位姿: [x, y, z, rx, ry, rz] (m + rad)
+        # 位姿: [x, y, z, rx, ry, rz] (Realman 实际单位: mm + rad)
         pose = state['pose']
-        x, y, z, rx, ry, rz = pose
+        x_raw, y_raw, z_raw, rx, ry, rz = pose
+        # 应用位置缩放 (默认 0.001: mm -> m)
+        x = x_raw * self.position_scale
+        y = y_raw * self.position_scale
+        z = z_raw * self.position_scale
 
-        # 发布原始位姿（保留欧拉角，不做约定转换，供后续选择）
+        # 发布原始位姿（已转米，单位与 board_tvec 一致）
         raw_msg = Float64MultiArray()
         raw_msg.data = [float(x), float(y), float(z),
                         float(rx), float(ry), float(rz)]
