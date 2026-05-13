@@ -12,34 +12,58 @@ from rclpy.node import Node
 from std_srvs.srv import Trigger
 
 
+# ANSI 颜色码
+class C:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    RESET = '\033[0m'
+
+
+CAPTURE_SRV = '/data_collector/capture'
+SAVE_SRV = '/data_collector/save_dataset'
+
+
 class KeyboardTrigger(Node):
     def __init__(self):
         super().__init__('keyboard_trigger')
-        self.capture_client = self.create_client(
-            Trigger, '/data_collector/capture')
-        self.save_client = self.create_client(
-            Trigger, '/data_collector/save_dataset')
+        self.capture_client = self.create_client(Trigger, CAPTURE_SRV)
+        self.save_client = self.create_client(Trigger, SAVE_SRV)
 
         self.get_logger().info(
-            'Keyboard trigger ready.\n'
-            '  [SPACE] - Capture sample\n'
-            '  [s]     - Save dataset\n'
-            '  [q]     - Quit')
+            f'{C.CYAN}Keyboard trigger ready.{C.RESET}\n'
+            f'  Service [capture]      : {CAPTURE_SRV}\n'
+            f'  Service [save_dataset] : {SAVE_SRV}\n'
+            f'  {C.BOLD}[SPACE]{C.RESET} - Capture sample\n'
+            f'  {C.BOLD}[s]{C.RESET}     - Save dataset\n'
+            f'  {C.BOLD}[q]{C.RESET}     - Quit')
 
-    def call_service(self, client, name):
+    def call_service(self, client, label):
+        srv_name = client.srv_name  # 实际服务话题名
         if not client.wait_for_service(timeout_sec=2.0):
-            self.get_logger().error(f'Service {name} not available.')
+            self.get_logger().error(
+                f'{C.RED}{C.BOLD}[SERVICE NOT AVAILABLE]{C.RESET} '
+                f'{C.RED}label={label}, topic={srv_name}{C.RESET}\n'
+                f'{C.YELLOW}Hint: check `ros2 service list | grep '
+                f'{srv_name.split("/")[-1]}` and make sure data_collector '
+                f'is running.{C.RESET}')
             return
         future = client.call_async(Trigger.Request())
         rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
         if future.result() is not None:
             result = future.result()
             if result.success:
-                self.get_logger().info(f'[OK] {result.message}')
+                self.get_logger().info(
+                    f'{C.GREEN}[OK]{C.RESET} ({srv_name}) {result.message}')
             else:
-                self.get_logger().warn(f'[FAIL] {result.message}')
+                self.get_logger().warn(
+                    f'{C.YELLOW}[FAIL]{C.RESET} ({srv_name}) {result.message}')
         else:
-            self.get_logger().error(f'Service call {name} failed.')
+            self.get_logger().error(
+                f'{C.RED}[CALL TIMEOUT]{C.RESET} '
+                f'label={label}, topic={srv_name}')
 
 
 def get_key():

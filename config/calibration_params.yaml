@@ -3,7 +3,7 @@
     # --- 机械臂配置 ---
     # arm1 = 左臂 (camera_l)
     arm1:
-      ip: "192.168.1.18"
+      ip: "192.168.30.123"
       port: 8080
       camera_topic: "/camera_l/color/image_raw"
       camera_info_topic: "/camera_l/color/camera_info"
@@ -12,7 +12,7 @@
       camera_frame: "camera_l_link"
     # arm2 = 右臂 (camera_r)
     arm2:
-      ip: "192.168.1.19"
+      ip: "192.168.30.124"
       port: 8080
       camera_topic: "/camera_r/color/image_raw"
       camera_info_topic: "/camera_r/color/camera_info"

@@ -26,6 +26,16 @@ except ImportError as e:
     _import_err = e
 
 
+# ANSI 颜色码
+class C:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    RESET = '\033[0m'
+
+
 class ArmDriverNode(Node):
     def __init__(self):
         super().__init__('arm_driver')
@@ -55,20 +65,39 @@ class ArmDriverNode(Node):
 
         if not SDK_AVAILABLE:
             self.get_logger().error(
-                f'Robotic_Arm SDK not available: {_import_err}\n'
-                f'Install with: pip install Robotic_Arm')
+                f'{C.RED}{C.BOLD}[SDK MISSING]{C.RESET} '
+                f'{C.RED}Robotic_Arm SDK not available: {_import_err}{C.RESET}\n'
+                f'{C.YELLOW}Install with: pip install Robotic_Arm{C.RESET}')
             raise RuntimeError('Robotic_Arm SDK missing')
 
         # 连接机械臂
-        self.arm = RoboticArm(rm_thread_mode_e.RM_SINGLE_MODE_E)
-        handle = self.arm.rm_create_robot_arm(ip, port, level=log_level)
+        self.get_logger().info(
+            f'{C.YELLOW}{C.BOLD}[CONNECTING]{C.RESET} '
+            f'{C.YELLOW}Trying to connect [{self.arm_name}] at {ip}:{port} ...{C.RESET}')
+
+        self.arm = None
+        try:
+            self.arm = RoboticArm(rm_thread_mode_e.RM_SINGLE_MODE_E)
+            handle = self.arm.rm_create_robot_arm(ip, port, level=log_level)
+        except Exception as e:
+            self.get_logger().error(
+                f'{C.RED}{C.BOLD}[CONNECT FAIL]{C.RESET} '
+                f'{C.RED}Exception while creating handle: {e}{C.RESET}')
+            raise
+
         if handle.id == -1:
             self.get_logger().error(
-                f'Failed to connect to arm at {ip}:{port} (handle.id == -1)')
+                f'{C.RED}{C.BOLD}[CONNECT FAIL]{C.RESET} '
+                f'{C.RED}Cannot connect to [{self.arm_name}] at {ip}:{port} '
+                f'(handle.id == -1).{C.RESET}\n'
+                f'{C.YELLOW}Check: 1) network reachable (ping {ip}); '
+                f'2) robot powered on; 3) port {port} correct.{C.RESET}')
             raise RuntimeError(f'Arm connection failed: {ip}:{port}')
+
         self.get_logger().info(
-            f'Connected to [{self.arm_name}] at {ip}:{port}, '
-            f'handle.id={handle.id}, DOF={self.arm.arm_dof}')
+            f'{C.GREEN}{C.BOLD}[CONNECT OK]{C.RESET} '
+            f'{C.GREEN}Connected to [{self.arm_name}] at {ip}:{port}, '
+            f'handle.id={handle.id}, DOF={self.arm.arm_dof}{C.RESET}')
 
         # 发布器
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -102,7 +131,9 @@ class ArmDriverNode(Node):
         ret, state = self.arm.rm_get_current_arm_state()
         if ret != 0:
             self.get_logger().warn(
-                f'rm_get_current_arm_state failed, ret={ret}', throttle_duration_sec=2.0)
+                f'{C.YELLOW}[POLL FAIL]{C.RESET} '
+                f'{C.YELLOW}rm_get_current_arm_state failed, ret={ret}{C.RESET}',
+                throttle_duration_sec=2.0)
             return
 
         now = self.get_clock().now().to_msg()
@@ -138,9 +169,13 @@ class ArmDriverNode(Node):
         try:
             if hasattr(self, 'arm') and self.arm is not None:
                 self.arm.rm_delete_robot_arm()
-                self.get_logger().info(f'Disconnected from [{self.arm_name}].')
+                self.get_logger().info(
+                    f'{C.CYAN}[DISCONNECT]{C.RESET} '
+                    f'{C.CYAN}Disconnected from [{self.arm_name}].{C.RESET}')
         except Exception as e:
-            self.get_logger().warn(f'Error during disconnect: {e}')
+            self.get_logger().warn(
+                f'{C.YELLOW}[DISCONNECT WARN]{C.RESET} '
+                f'{C.YELLOW}Error during disconnect: {e}{C.RESET}')
         super().destroy_node()
 
 

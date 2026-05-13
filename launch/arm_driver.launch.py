@@ -33,5 +33,6 @@ def generate_launch_description():
                 {'arm_name': LaunchConfiguration('arm_name')},
             ],
             output='screen',
+            emulate_tty=True,  # 保留 ANSI 颜色
         ),
     ])
