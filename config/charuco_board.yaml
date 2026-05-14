@@ -5,7 +5,7 @@
     squares_y: 7           # 棋盘格行数
     square_length: 0.033    # 方格边长 (米)
     marker_length: 0.02    # ArUco标记边长 (米)
-    dictionary: "5x5_100"  # ArUco字典类型
+    dictionary: "DICT_5X5_100"  # ArUco字典类型
 
 # 长10.1+13.5=23.6
 # 宽：10.1+6.7=16.8
