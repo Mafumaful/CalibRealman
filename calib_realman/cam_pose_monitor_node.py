@@ -255,8 +255,10 @@ class CamPoseMonitorNode(Node):
             pos_in_board = T_c2b[:3, 3]          # [x, y, z] (m)，board 为原点
             rot_in_board = T_c2b[:3, :3]
 
-            self.trail_xz.append(np.array([pos_in_board[0], pos_in_board[2]]))
-            self.trail_yz.append(np.array([pos_in_board[1], pos_in_board[2]]))
+            # 轨迹用 |Z| 作为深度轴（板面 Z 轴朝内，相机在负 Z 侧，取绝对值更直观）
+            depth = abs(pos_in_board[2])
+            self.trail_xz.append(np.array([pos_in_board[0], depth]))
+            self.trail_yz.append(np.array([pos_in_board[1], depth]))
 
             self._maybe_print(pos_in_board, rot_in_board, len(corners))
 
@@ -334,7 +336,7 @@ class CamPoseMonitorNode(Node):
             dist_color = _C.OK if 300 <= dist_mm <= 1200 else _C.WARN
             put(f'X = {x_mm:+7.1f} mm', _C.AXIS_X)
             put(f'Y = {y_mm:+7.1f} mm', _C.AXIS_Y)
-            put(f'Z = {z_mm:+7.1f} mm', _C.AXIS_Z)
+            put(f'Z = {z_mm:+7.1f} mm (neg=front)', _C.AXIS_Z)
             put(f'dist = {dist_mm:.1f} mm', dist_color)
             rpy = Rotation.from_matrix(
                 invert_transform(rvec_tvec_to_matrix(rvec, tvec))[:3, :3]
@@ -381,9 +383,10 @@ class CamPoseMonitorNode(Node):
         v_xz.draw_board(self.board_half_w, 0)  # board 沿 X 轴展开，Z=0
         v_xz.draw_trail(self.trail_xz)
         if pos_now is not None:
-            label = f'{pos_now[0]*1000:+.0f},{pos_now[2]*1000:+.0f}mm'
-            v_xz.draw_camera(pos_now[0], pos_now[2], label)
-        v_xz.draw_title_labels('Top View  (X - Z depth)', 'X', 'Z')
+            depth = abs(pos_now[2])
+            label = f'{pos_now[0]*1000:+.0f}, {depth*1000:.0f}mm'
+            v_xz.draw_camera(pos_now[0], depth, label)
+        v_xz.draw_title_labels('Top View  (X - depth)', 'X', 'depth')
         v_xz.draw_scale()
 
         # ── 侧视图：Y-Z（下半）─────────────────────────────────────────────
@@ -396,9 +399,10 @@ class CamPoseMonitorNode(Node):
         v_yz.draw_board(self.board_half_h, 0)  # board 沿 Y 轴展开，Z=0
         v_yz.draw_trail(self.trail_yz)
         if pos_now is not None:
-            label = f'{pos_now[1]*1000:+.0f},{pos_now[2]*1000:+.0f}mm'
-            v_yz.draw_camera(pos_now[1], pos_now[2], label)
-        v_yz.draw_title_labels('Side View (Y - Z depth)', 'Y', 'Z')
+            depth = abs(pos_now[2])
+            label = f'{pos_now[1]*1000:+.0f}, {depth*1000:.0f}mm'
+            v_yz.draw_camera(pos_now[1], depth, label)
+        v_yz.draw_title_labels('Side View (Y - depth)', 'Y', 'depth')
         v_yz.draw_scale()
 
         # 分隔线
