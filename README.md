@@ -153,6 +153,25 @@ ros2 service call /global_cam_calibration/calibrate_global std_srvs/srv/Trigger
 - `arm1_hand_eye.yaml`、`arm2_hand_eye.yaml`（cam→ee 变换）
 - `global_cam_to_world.yaml`、`board_to_world.yaml`
 
+# 试 xyz（外旋）
+ros2 run calib_realman calibration --ros-args \
+    -p arm_name:=arm1 \
+    -p calibration.euler_convention:=xyz
+ros2 service call /calibration/run_calibration std_srvs/srv/Trigger
+
+# 停掉上面那个，再试 zyx
+ros2 run calib_realman calibration --ros-args \
+    -p arm_name:=arm1 \
+    -p calibration.euler_convention:=zyx
+ros2 service call /calibration/run_calibration std_srvs/srv/Trigger
+
+# 再试 XYZ / ZYX（大写=内旋）
+ros2 run calib_realman calibration --ros-args \
+    -p arm_name:=arm1 -p calibration.euler_convention:=ZYX
+ros2 service call /calibration/run_calibration std_srvs/srv/Trigger
+
+哪个约定的 Rotation error 最小，就是对的。不需要重采。
+
 ### 7. 发布标定 TF
 
 ```bash
