@@ -145,18 +145,18 @@ class _View2D:
         cv2.putText(self.canvas, title,
                     (self.rx + 6, self.ry + 15),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.44, _C.TEXT, 1, cv2.LINE_AA)
-        cv2.putText(self.canvas, f'→ {x_label}',
+        cv2.putText(self.canvas, f'-> {x_label}',
                     (self.rx + self.rw - 80, self.ry + self.rh - 6),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.32, _C.TEXT_DIM, 1)
-        cv2.putText(self.canvas, f'↑ {y_label}',
+        cv2.putText(self.canvas, f'^ {y_label}',
                     (self.rx + 4, self.ry + self.rh - 6),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.32, _C.TEXT_DIM, 1)
 
     def draw_scale(self):
         """在右下角标注当前视野范围。"""
-        label = f'±{self.half_span * 1000:.0f}mm'
+        label = f'+/-{self.half_span * 1000:.0f}mm'
         cv2.putText(self.canvas, label,
-                    (self.rx + self.rw - 62, self.ry + 14),
+                    (self.rx + self.rw - 70, self.ry + 14),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.32, _C.TEXT_DIM, 1)
 
 
@@ -180,7 +180,7 @@ class CamPoseMonitorNode(Node):
         self.declare_parameter('squares_y',      7)
         self.declare_parameter('square_length',  0.04)
         self.declare_parameter('marker_length',  0.03)
-        self.declare_parameter('dictionary',     'DICT_4X4_50')
+        self.declare_parameter('dictionary',     'DICT_5X5_100')
         self.declare_parameter('trail_len',      300)   # 最多保留多少帧轨迹
         self.declare_parameter('print_hz',       5.0)   # 终端打印频率
         self.declare_parameter('window_scale',   1.0)   # 整体窗口缩放
@@ -339,7 +339,7 @@ class CamPoseMonitorNode(Node):
             rpy = Rotation.from_matrix(
                 invert_transform(rvec_tvec_to_matrix(rvec, tvec))[:3, :3]
             ).as_euler('xyz', degrees=True)
-            put(f'RPY  {rpy[0]:+.1f}° {rpy[1]:+.1f}° {rpy[2]:+.1f}°', _C.TEXT, 0.46)
+            put(f'RPY {rpy[0]:+.1f} {rpy[1]:+.1f} {rpy[2]:+.1f} deg', _C.TEXT, 0.46)
             put(f'corners = {len(corners)}', _C.TEXT, 0.44)
         else:
             put('Board NOT detected', _C.WARN)
@@ -383,7 +383,7 @@ class CamPoseMonitorNode(Node):
         if pos_now is not None:
             label = f'{pos_now[0]*1000:+.0f},{pos_now[2]*1000:+.0f}mm'
             v_xz.draw_camera(pos_now[0], pos_now[2], label)
-        v_xz.draw_title_labels('Top View  (X – Z depth)', 'X', 'Z')
+        v_xz.draw_title_labels('Top View  (X - Z depth)', 'X', 'Z')
         v_xz.draw_scale()
 
         # ── 侧视图：Y-Z（下半）─────────────────────────────────────────────
@@ -398,7 +398,7 @@ class CamPoseMonitorNode(Node):
         if pos_now is not None:
             label = f'{pos_now[1]*1000:+.0f},{pos_now[2]*1000:+.0f}mm'
             v_yz.draw_camera(pos_now[1], pos_now[2], label)
-        v_yz.draw_title_labels('Side View (Y – Z depth)', 'Y', 'Z')
+        v_yz.draw_title_labels('Side View (Y - Z depth)', 'Y', 'Z')
         v_yz.draw_scale()
 
         # 分隔线
@@ -421,9 +421,9 @@ class CamPoseMonitorNode(Node):
 
     def _draw_legend(self, panel):
         items = [
-            (_C.BOARD,     '─  board'),
-            (_C.TRAIL_HI,  '─  trail'),
-            (_C.CAM_FILL,  '●  camera now'),
+            (_C.BOARD,    '-  board'),
+            (_C.TRAIL_HI, '-  trail'),
+            (_C.CAM_FILL, '*  camera now'),
         ]
         x0, y0 = self.TRAJ_W - 110, self.TRAJ_H - 10 - len(items) * 16
         for i, (color, label) in enumerate(items):
