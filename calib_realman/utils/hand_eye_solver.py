@@ -51,10 +51,17 @@ def solve_hand_eye(R_gripper2base_list, t_gripper2base_list,
 def compute_reprojection_error(R_gripper2base_list, t_gripper2base_list,
                                 R_target2cam_list, t_target2cam_list,
                                 R_cam2gripper, t_cam2gripper):
-    """计算手眼标定的一致性误差。
+    """计算手眼标定的一致性误差（AX = XB 残差）。
 
-    通过验证 AX = XB 的一致性来评估标定质量。
-    对于每对样本(i,j)，检查: A_ij * X ≈ X * B_ij
+    Eye-in-hand 约束推导：
+      T_g[k] @ X @ T_b[k] = T_board2world（常数），对第 i、j 对：
+
+        T_g[j]⁻¹ @ T_g[i] @ X  =  X @ T_b[j] @ T_b[i]⁻¹
+               A_ij                        B_ij
+
+    因此：
+        A_ij = inv(T_g[j]) @ T_g[i]  →  inv(Aj) @ Ai
+        B_ij = T_b[j] @ inv(T_b[i])  →  Bj @ inv(Bi)   ← 注意 j 在前
 
     Returns:
         (rotation_error_deg, translation_error_mm): 平均旋转误差(度)和平移误差(mm)
@@ -69,7 +76,7 @@ def compute_reprojection_error(R_gripper2base_list, t_gripper2base_list,
 
     for i in range(n):
         for j in range(i + 1, n):
-            # A_ij = inv(A_j) * A_i
+            # A_ij = inv(T_g[j]) @ T_g[i]
             Ai = np.eye(4)
             Ai[:3, :3] = R_gripper2base_list[i]
             Ai[:3, 3] = t_gripper2base_list[i].flatten()
@@ -80,7 +87,7 @@ def compute_reprojection_error(R_gripper2base_list, t_gripper2base_list,
 
             A_ij = np.linalg.inv(Aj) @ Ai
 
-            # B_ij = B_i * inv(B_j)
+            # B_ij = T_b[j] @ inv(T_b[i])  （j 在前，i 在后，与 A 的 j/i 顺序对应）
             Bi = np.eye(4)
             Bi[:3, :3] = R_target2cam_list[i]
             Bi[:3, 3] = t_target2cam_list[i].flatten()
@@ -89,7 +96,7 @@ def compute_reprojection_error(R_gripper2base_list, t_gripper2base_list,
             Bj[:3, :3] = R_target2cam_list[j]
             Bj[:3, 3] = t_target2cam_list[j].flatten()
 
-            B_ij = Bi @ np.linalg.inv(Bj)
+            B_ij = Bj @ np.linalg.inv(Bi)   # 修复：原为 Bi @ inv(Bj)，i/j 对调导致算出 B⁻¹
 
             # AX vs XB
             AX = A_ij @ X

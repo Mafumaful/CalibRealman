@@ -255,8 +255,9 @@ class CamPoseMonitorNode(Node):
             pos_in_board = T_c2b[:3, 3]          # [x, y, z] (m)，board 为原点
             rot_in_board = T_c2b[:3, :3]
 
-            # 轨迹用 |Z| 作为深度轴（板面 Z 轴朝内，相机在负 Z 侧，取绝对值更直观）
-            depth = abs(pos_in_board[2])
+            # OpenCV ChArUco 板坐标系：X→右，Y↓下，Z 朝板内（远离相机）
+            # 相机在板前方时 pos_in_board[2] < 0，取负值得到正的"深度"
+            depth = -pos_in_board[2]
             self.trail_xz.append(np.array([pos_in_board[0], depth]))
             self.trail_yz.append(np.array([pos_in_board[1], depth]))
 
@@ -284,7 +285,8 @@ class CamPoseMonitorNode(Node):
             return
         self._last_print = now
 
-        x, y, z   = pos * 1000          # 转 mm
+        x, y, z   = pos * 1000          # 转 mm；Z<0 表示相机在板前方（板Z朝内）
+        depth_mm   = -z                  # 正深度 = -Z
         dist       = float(np.linalg.norm(pos)) * 1000
         rpy        = Rotation.from_matrix(rot).as_euler('xyz', degrees=True)
         roll, pitch, yaw = rpy
@@ -293,8 +295,8 @@ class CamPoseMonitorNode(Node):
         print(
             f'\r[CamInBoard]  '
             f'X={x:+7.1f}  Y={y:+7.1f}  Z={z:+7.1f} mm  '
-            f'dist={dist:6.1f} mm  |  '
-            f'roll={roll:+6.1f}° pitch={pitch:+6.1f}° yaw={yaw:+6.1f}°  '
+            f'depth={depth_mm:6.1f} mm  |  '
+            f'roll={roll:+6.1f}  pitch={pitch:+6.1f}  yaw={yaw:+6.1f} deg  '
             f'corners={n_corners:2d}  det={det_pct:.0f}%   ',
             end='', flush=True)
 
@@ -336,7 +338,7 @@ class CamPoseMonitorNode(Node):
             dist_color = _C.OK if 300 <= dist_mm <= 1200 else _C.WARN
             put(f'X = {x_mm:+7.1f} mm', _C.AXIS_X)
             put(f'Y = {y_mm:+7.1f} mm', _C.AXIS_Y)
-            put(f'Z = {z_mm:+7.1f} mm (neg=front)', _C.AXIS_Z)
+            put(f'Z = {z_mm:+7.1f} mm  (board-in, cam<0)', _C.AXIS_Z)
             put(f'dist = {dist_mm:.1f} mm', dist_color)
             rpy = Rotation.from_matrix(
                 invert_transform(rvec_tvec_to_matrix(rvec, tvec))[:3, :3]
@@ -383,10 +385,10 @@ class CamPoseMonitorNode(Node):
         v_xz.draw_board(self.board_half_w, 0)  # board 沿 X 轴展开，Z=0
         v_xz.draw_trail(self.trail_xz)
         if pos_now is not None:
-            depth = abs(pos_now[2])
+            depth = -pos_now[2]   # board Z 朝内，相机在负Z侧，取负得正深度
             label = f'{pos_now[0]*1000:+.0f}, {depth*1000:.0f}mm'
             v_xz.draw_camera(pos_now[0], depth, label)
-        v_xz.draw_title_labels('Top View  (X - depth)', 'X', 'depth')
+        v_xz.draw_title_labels('Top View  (X - depth)', 'X', 'depth(-Z)')
         v_xz.draw_scale()
 
         # ── 侧视图：Y-Z（下半）─────────────────────────────────────────────
@@ -399,10 +401,10 @@ class CamPoseMonitorNode(Node):
         v_yz.draw_board(self.board_half_h, 0)  # board 沿 Y 轴展开，Z=0
         v_yz.draw_trail(self.trail_yz)
         if pos_now is not None:
-            depth = abs(pos_now[2])
+            depth = -pos_now[2]
             label = f'{pos_now[1]*1000:+.0f}, {depth*1000:.0f}mm'
             v_yz.draw_camera(pos_now[1], depth, label)
-        v_yz.draw_title_labels('Side View (Y - depth)', 'Y', 'depth')
+        v_yz.draw_title_labels('Side View (Y - depth)', 'Y', 'depth(-Z)')
         v_yz.draw_scale()
 
         # 分隔线
