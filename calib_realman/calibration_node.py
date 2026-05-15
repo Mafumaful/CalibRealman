@@ -162,7 +162,7 @@ class CalibrationNode(Node):
             for conv in AUTO_CONVENTIONS:
                 r = self._solve_one(samples, conv)
                 if r is None:
-                    self.get_logger().warn(
+                    self.get_logger().warning(
                         f'  [{conv}] skipped (no raw_pose)')
                     continue
                 rot_err, trans_err, mat, skipped = r
@@ -218,7 +218,7 @@ class CalibrationNode(Node):
 
         rot_err, trans_err, mat, skipped = r
         if skipped > 0:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f'{skipped} samples had no raw_pose, skipped.')
 
         tmag = np.linalg.norm(mat[:3, 3]) * 1000

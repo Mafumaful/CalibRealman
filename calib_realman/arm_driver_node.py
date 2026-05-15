@@ -201,7 +201,7 @@ class ArmDriverNode(Node):
         """轮询机械臂状态并发布TF + JointState。"""
         ret, state = self.arm.rm_get_current_arm_state()
         if ret != 0:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f'{C.YELLOW}[POLL FAIL]{C.RESET} '
                 f'{C.YELLOW}rm_get_current_arm_state failed, ret={ret}{C.RESET}',
                 throttle_duration_sec=2.0)
@@ -269,7 +269,7 @@ class ArmDriverNode(Node):
                     f'{C.CYAN}[DISCONNECT]{C.RESET} '
                     f'{C.CYAN}Disconnected from [{self.arm_name}].{C.RESET}')
         except Exception as e:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f'{C.YELLOW}[DISCONNECT WARN]{C.RESET} '
                 f'{C.YELLOW}Error during disconnect: {e}{C.RESET}')
         super().destroy_node()

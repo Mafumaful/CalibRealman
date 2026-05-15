@@ -55,7 +55,7 @@ class TFPublisherNode(Node):
                 'arm1_ee_link', 'arm1_cam_link', pos, quat))
             self.get_logger().info('Loaded arm1 hand-eye calibration.')
         else:
-            self.get_logger().warn(f'arm1 hand-eye result not found: {arm1_he_path}')
+            self.get_logger().warning(f'arm1 hand-eye result not found: {arm1_he_path}')
 
         # arm2_ee_link -> arm2_cam_link (from hand-eye calibration)
         arm2_he_path = os.path.join(self.results_dir, 'arm2_hand_eye.yaml')
@@ -66,7 +66,7 @@ class TFPublisherNode(Node):
                 'arm2_ee_link', 'arm2_cam_link', pos, quat))
             self.get_logger().info('Loaded arm2 hand-eye calibration.')
         else:
-            self.get_logger().warn(f'arm2 hand-eye result not found: {arm2_he_path}')
+            self.get_logger().warning(f'arm2 hand-eye result not found: {arm2_he_path}')
 
         # world -> global_cam_link (from global camera calibration)
         global_path = os.path.join(self.results_dir, 'global_cam_to_world.yaml')
@@ -77,7 +77,7 @@ class TFPublisherNode(Node):
                 'world', 'global_cam_link', pos, quat))
             self.get_logger().info('Loaded global camera calibration.')
         else:
-            self.get_logger().warn(f'Global cam result not found: {global_path}')
+            self.get_logger().warning(f'Global cam result not found: {global_path}')
 
         # 发布所有静态TF
         if transforms:

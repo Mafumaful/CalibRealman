@@ -129,7 +129,7 @@ class BoardTFPublisherNode(Node):
             self._publish_tf(rvec, tvec, stamp)
         else:
             if not self._detected_ever:
-                self.get_logger().warn(
+                self.get_logger().warning(
                     f'Board not detected. Check: '
                     f'(1) board is in camera view; '
                     f'(2) dictionary={self.get_parameter("dictionary").value} matches your board; '

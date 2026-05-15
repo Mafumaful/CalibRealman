@@ -169,13 +169,13 @@ class DataCollectorNode(Node):
             return
         n_aruco, n_charuco = self.charuco.detect_diagnostic(self.latest_image)
         if n_aruco == 0:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 '[PREVIEW] No ArUco markers detected. '
                 'Likely WRONG DICTIONARY. Run: '
                 'ros2 run calib_realman diagnose_charuco --ros-args '
                 f'-p camera_topic:={self.image_sub.topic_name}')
         elif n_charuco < 6:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f'[PREVIEW] ArUco markers={n_aruco} but ChArUco corners={n_charuco} (<6). '
                 'Likely WRONG board geometry (squares_x/squares_y) or partial occlusion.')
         else:
