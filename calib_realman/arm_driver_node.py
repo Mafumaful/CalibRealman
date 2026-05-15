@@ -14,7 +14,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
-from tf2_ros import TransformBroadcaster
+from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
 from geometry_msgs.msg import TransformStamped
 from scipy.spatial.transform import Rotation
 
@@ -142,11 +142,15 @@ class ArmDriverNode(Node):
         self.raw_pose_pub = self.create_publisher(
             Float64MultiArray, f'/{self.arm_name}/raw_pose', 10)
 
+        # ee_link → camera_link 是固定变换，用 StaticTransformBroadcaster 发布一次即可
+        if self.publish_camera_tf:
+            self._publish_static_camera_tf()
+
         # 定时轮询
         self.timer = self.create_timer(1.0 / rate, self._poll_callback)
         tf_desc = f'{self.base_frame} -> {self.ee_frame}'
         if self.publish_camera_tf:
-            tf_desc += f', {self.ee_frame} -> {self.camera_frame}'
+            tf_desc += f'  |  {self.ee_frame} -> {self.camera_frame} (static)'
         self.get_logger().info(
             f'Polling arm state at {rate} Hz, publishing TF: {tf_desc}')
 
@@ -173,6 +177,25 @@ class ArmDriverNode(Node):
         ]
         for line in lines:
             self.get_logger().info(line)
+
+    def _publish_static_camera_tf(self):
+        """用 StaticTransformBroadcaster 发布一次 ee_link → camera_link。"""
+        static_broadcaster = StaticTransformBroadcaster(self)
+        cam_t = TransformStamped()
+        cam_t.header.stamp = self.get_clock().now().to_msg()
+        cam_t.header.frame_id = self.ee_frame
+        cam_t.child_frame_id = self.camera_frame
+        cam_t.transform.translation.x = self._camera_translation[0]
+        cam_t.transform.translation.y = self._camera_translation[1]
+        cam_t.transform.translation.z = self._camera_translation[2]
+        cam_t.transform.rotation.x = float(self._camera_quat[0])
+        cam_t.transform.rotation.y = float(self._camera_quat[1])
+        cam_t.transform.rotation.z = float(self._camera_quat[2])
+        cam_t.transform.rotation.w = float(self._camera_quat[3])
+        static_broadcaster.sendTransform(cam_t)
+        self.get_logger().info(
+            f'{C.GREEN}[STATIC TF]{C.RESET} '
+            f'{C.GREEN}Published {self.ee_frame} -> {self.camera_frame}{C.RESET}')
 
     def _poll_callback(self):
         """轮询机械臂状态并发布TF + JointState。"""
@@ -227,22 +250,7 @@ class ArmDriverNode(Node):
         t.transform.rotation.z = float(quat[2])
         t.transform.rotation.w = float(quat[3])
 
-        transforms = [t]
-        if self.publish_camera_tf:
-            cam_t = TransformStamped()
-            cam_t.header.stamp = now
-            cam_t.header.frame_id = self.ee_frame
-            cam_t.child_frame_id = self.camera_frame
-            cam_t.transform.translation.x = self._camera_translation[0]
-            cam_t.transform.translation.y = self._camera_translation[1]
-            cam_t.transform.translation.z = self._camera_translation[2]
-            cam_t.transform.rotation.x = float(self._camera_quat[0])
-            cam_t.transform.rotation.y = float(self._camera_quat[1])
-            cam_t.transform.rotation.z = float(self._camera_quat[2])
-            cam_t.transform.rotation.w = float(self._camera_quat[3])
-            transforms.append(cam_t)
-
-        self.tf_broadcaster.sendTransform(transforms)
+        self.tf_broadcaster.sendTransform(t)
 
         # JointState (弧度)
         joints = state['joint']  # 单位: 度
