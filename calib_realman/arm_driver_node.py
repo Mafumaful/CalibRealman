@@ -51,8 +51,17 @@ class ArmDriverNode(Node):
         self.declare_parameter(f'{prefix}.port', 8080)
         self.declare_parameter(f'{prefix}.base_frame', f'{prefix}_base_link')
         self.declare_parameter(f'{prefix}.ee_frame', f'{prefix}_ee_link')
+        self.declare_parameter(
+            f'{prefix}.camera_frame',
+            'camera_l_link' if self.arm_name == 'arm1' else 'camera_r_link')
+        # 相机相对末端: [x,y,z,rx,ry,rz]，平移 m，旋转默认度
+        self.declare_parameter(
+            f'{prefix}.camera_to_ee', [0.08, 0.0, 0.03, 45.0, 0.0, 0.0])
 
         self.declare_parameter('rate', 30.0)  # Hz
+        self.declare_parameter('publish_camera_tf', True)
+        self.declare_parameter('camera_euler_convention', 'xyz')
+        self.declare_parameter('camera_rotation_in_degrees', True)
         self.declare_parameter('log_level', 3)  # 0=debug 1=info 2=warn 3=error
         # 睿尔曼欧拉角约定: 'xyz'(外旋) / 'XYZ'(内旋) / 'zyx' / 'ZYX'
         self.declare_parameter('euler_convention', 'xyz')
@@ -64,12 +73,30 @@ class ArmDriverNode(Node):
         port = self.get_parameter(f'{prefix}.port').value
         self.base_frame = self.get_parameter(f'{prefix}.base_frame').value
         self.ee_frame = self.get_parameter(f'{prefix}.ee_frame').value
+        self.camera_frame = self.get_parameter(f'{prefix}.camera_frame').value
         rate = self.get_parameter('rate').value
         log_level = self.get_parameter('log_level').value
         self.euler_convention = self.get_parameter('euler_convention').value
         self.position_scale = self.get_parameter('position_scale').value
+        self.publish_camera_tf = self.get_parameter('publish_camera_tf').value
+        camera_euler = self.get_parameter('camera_euler_convention').value
+        camera_deg = self.get_parameter('camera_rotation_in_degrees').value
+        cam_pose = list(self.get_parameter(f'{prefix}.camera_to_ee').value)
+        if len(cam_pose) != 6:
+            raise ValueError(
+                f'{prefix}.camera_to_ee must be [x,y,z,rx,ry,rz], got {cam_pose}')
 
-        self._print_loaded_params(ip, port, rate)
+        self._camera_translation = [float(cam_pose[0]), float(cam_pose[1]),
+                                    float(cam_pose[2])]
+        rpy = [float(cam_pose[3]), float(cam_pose[4]), float(cam_pose[5])]
+        if camera_deg:
+            rpy = [math.radians(v) for v in rpy]
+        if camera_euler == 'rotvec':
+            self._camera_quat = Rotation.from_rotvec(rpy).as_quat()
+        else:
+            self._camera_quat = Rotation.from_euler(camera_euler, rpy).as_quat()
+
+        self._print_loaded_params(ip, port, rate, cam_pose, camera_euler, camera_deg)
 
         if not SDK_AVAILABLE:
             self.get_logger().error(
@@ -117,11 +144,14 @@ class ArmDriverNode(Node):
 
         # 定时轮询
         self.timer = self.create_timer(1.0 / rate, self._poll_callback)
+        tf_desc = f'{self.base_frame} -> {self.ee_frame}'
+        if self.publish_camera_tf:
+            tf_desc += f', {self.ee_frame} -> {self.camera_frame}'
         self.get_logger().info(
-            f'Polling arm state at {rate} Hz, '
-            f'publishing TF {self.base_frame} -> {self.ee_frame}')
+            f'Polling arm state at {rate} Hz, publishing TF: {tf_desc}')
 
-    def _print_loaded_params(self, ip, port, rate):
+    def _print_loaded_params(self, ip, port, rate, cam_pose, camera_euler, camera_deg):
+        rot_unit = 'deg' if camera_deg else 'rad'
         lines = [
             '=' * 60,
             f'  Arm Driver Loaded Parameters [{self.arm_name}]',
@@ -131,6 +161,10 @@ class ArmDriverNode(Node):
             f'  port              : {port}',
             f'  base_frame        : {self.base_frame}',
             f'  ee_frame          : {self.ee_frame}',
+            f'  camera_frame      : {self.camera_frame}',
+            f'  publish_camera_tf : {self.publish_camera_tf}',
+            f'  camera_to_ee      : {cam_pose} (xyz m, rpy {rot_unit})',
+            f'  camera_euler      : {camera_euler}',
             f'  rate (Hz)         : {rate}',
             f'  euler_convention  : {self.euler_convention}',
             f'  position_scale    : {self.position_scale} '
@@ -192,7 +226,23 @@ class ArmDriverNode(Node):
         t.transform.rotation.y = float(quat[1])
         t.transform.rotation.z = float(quat[2])
         t.transform.rotation.w = float(quat[3])
-        self.tf_broadcaster.sendTransform(t)
+
+        transforms = [t]
+        if self.publish_camera_tf:
+            cam_t = TransformStamped()
+            cam_t.header.stamp = now
+            cam_t.header.frame_id = self.ee_frame
+            cam_t.child_frame_id = self.camera_frame
+            cam_t.transform.translation.x = self._camera_translation[0]
+            cam_t.transform.translation.y = self._camera_translation[1]
+            cam_t.transform.translation.z = self._camera_translation[2]
+            cam_t.transform.rotation.x = float(self._camera_quat[0])
+            cam_t.transform.rotation.y = float(self._camera_quat[1])
+            cam_t.transform.rotation.z = float(self._camera_quat[2])
+            cam_t.transform.rotation.w = float(self._camera_quat[3])
+            transforms.append(cam_t)
+
+        self.tf_broadcaster.sendTransform(transforms)
 
         # JointState (弧度)
         joints = state['joint']  # 单位: 度
