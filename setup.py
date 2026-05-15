@@ -31,6 +31,7 @@ setup(
             'diagnose_dataset = calib_realman.diagnose_dataset:main',
             'keyboard_trigger = scripts.keyboard_trigger:main',
             'cam_pose_monitor = calib_realman.cam_pose_monitor_node:main',
+            'board_tf_publisher = calib_realman.board_tf_publisher_node:main',
         ],
     },
 )
