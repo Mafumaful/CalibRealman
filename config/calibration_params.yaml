@@ -11,7 +11,7 @@
       ee_frame: "arm1_ee_link"
       camera_frame: "camera_l_link"
       # 相机相对末端 [x,y,z,rx,ry,rz]：平移 m，旋转 deg (xyz 外旋)
-      camera_to_ee: [0.08, 0.0, 0.03, 45.0, 0.0, 0.0]
+      camera_to_ee: [0.08, 0.0, 0.03, 0.0, 0.0, 90.0]
     # arm2 = 右臂 (camera_r)
     arm2:
       ip: "192.168.30.124"
@@ -21,7 +21,7 @@
       base_frame: "arm2_base_link"
       ee_frame: "arm2_ee_link"
       camera_frame: "camera_r_link"
-      camera_to_ee: [0.08, 0.0, 0.03, 45.0, 0.0, 0.0]
+      camera_to_ee: [0.08, 0.0, 0.03, 0.0, 0.0, 90.0]
 
     # --- 全局相机 (camera_m = middle) ---
     global_camera:
