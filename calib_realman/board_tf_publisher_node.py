@@ -68,6 +68,7 @@ class BoardTFPublisherNode(Node):
         self.dist_coeffs   = None
         self._last_rvec    = None   # 最后一次有效检测结果
         self._last_tvec    = None
+        self._detected_ever = False
 
         # ── TF 广播器 ──────────────────────────────────────────────────────
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -118,12 +119,25 @@ class BoardTFPublisherNode(Node):
             image, self.camera_matrix, self.dist_coeffs)
 
         if ok:
+            if not self._detected_ever:
+                self.get_logger().info(
+                    f'[BoardTFPublisher] Board detected! '
+                    f'Publishing {self.camera_frame} -> {self.board_frame}')
+                self._detected_ever = True
             self._last_rvec = rvec
             self._last_tvec = tvec
             self._publish_tf(rvec, tvec, stamp)
-        elif self.publish_last and self._last_rvec is not None:
-            # 检测丢失，发布最后一次有效位姿（stamp 用当前时间保持 TF 树新鲜）
-            self._publish_tf(self._last_rvec, self._last_tvec, stamp)
+        else:
+            if not self._detected_ever:
+                self.get_logger().warn(
+                    f'Board not detected. Check: '
+                    f'(1) board is in camera view; '
+                    f'(2) dictionary={self.get_parameter("dictionary").value} matches your board; '
+                    f'(3) squares_x/y and square_length are correct.',
+                    throttle_duration_sec=5.0)
+            elif self.publish_last:
+                # 检测丢失，发布最后一次有效位姿（stamp 用当前时间保持 TF 树新鲜）
+                self._publish_tf(self._last_rvec, self._last_tvec, stamp)
 
     def _publish_tf(self, rvec, tvec, stamp):
         """将 board 在 camera 坐标系下的位姿发布为 TF。"""
