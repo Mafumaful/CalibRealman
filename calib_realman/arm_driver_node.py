@@ -56,9 +56,9 @@ class ArmDriverNode(Node):
         self.declare_parameter('log_level', 3)  # 0=debug 1=info 2=warn 3=error
         # 睿尔曼欧拉角约定: 'xyz'(外旋) / 'XYZ'(内旋) / 'zyx' / 'ZYX'
         self.declare_parameter('euler_convention', 'xyz')
-        # 位置缩放系数: 睿尔曼实际返回 mm，默认 0.001 转为米
+        # 位置缩放系数: 睿尔曼实际返回 mm，默认 0.001 转为米  --修正： 实际就是返回m
         # 如果你的固件确实返回 m，设为 1.0
-        self.declare_parameter('position_scale', 0.001)
+        self.declare_parameter('position_scale', 1.0)
 
         ip = self.get_parameter(f'{prefix}.ip').value
         port = self.get_parameter(f'{prefix}.port').value
@@ -160,6 +160,13 @@ class ArmDriverNode(Node):
         y = y_raw * self.position_scale
         z = z_raw * self.position_scale
 
+        # print(f'position_scale: {self.position_scale})')
+
+        # print(f'Pose (raw): [{x_raw:.1f}, {y_raw:.1f}, {z_raw:.1f}, '  
+        #       f'{rx:.3f}, {ry:.3f}, {rz:.3f}]')
+        # print(f'Pose (scaled): [{x:.3f}, {y:.3f}, {z:.3f}, '  
+        #       f'{rx:.3f}, {ry:.3f}, {rz:.3f}]')
+
         # 发布原始位姿（已转米，单位与 board_tvec 一致）
         raw_msg = Float64MultiArray()
         raw_msg.data = [float(x), float(y), float(z),
@@ -193,6 +200,7 @@ class ArmDriverNode(Node):
         js.header.stamp = now
         js.name = [f'{self.arm_name}_joint{i+1}' for i in range(len(joints))]
         js.position = [math.radians(float(j)) for j in joints]
+        # js.position = [float(j) for j in joints]
         self.joint_pub.publish(js)
 
     def destroy_node(self):
