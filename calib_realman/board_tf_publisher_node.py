@@ -76,12 +76,28 @@ class BoardTFPublisherNode(Node):
         self.create_subscription(Image,      camera_topic,      self._image_cb, 10)
         self.create_subscription(CameraInfo, camera_info_topic, self._info_cb,  10)
 
-        self.get_logger().info(
-            f'[BoardTFPublisher] camera_frame={self.camera_frame} '
-            f'board_frame={self.board_frame}\n'
-            f'  image : {camera_topic}\n'
-            f'  info  : {camera_info_topic}\n'
-            f'  publish_last_when_lost: {self.publish_last}')
+        self._print_loaded_params(camera_topic, camera_info_topic)
+
+    def _print_loaded_params(self, camera_topic, camera_info_topic):
+        lines = [
+            '=' * 60,
+            '  Board TF Publisher Loaded Parameters',
+            '=' * 60,
+            f'  camera_topic           : {camera_topic}',
+            f'  camera_info_topic      : {camera_info_topic}',
+            f'  camera_frame           : {self.camera_frame}',
+            f'  board_frame            : {self.board_frame}',
+            f'  publish_last_when_lost : {self.publish_last}',
+            '  --- ChArUco Board ---',
+            f'  squares_x              : {self.get_parameter("squares_x").value}',
+            f'  squares_y              : {self.get_parameter("squares_y").value}',
+            f'  square_length (m)      : {self.get_parameter("square_length").value}',
+            f'  marker_length (m)      : {self.get_parameter("marker_length").value}',
+            f'  dictionary             : {self.get_parameter("dictionary").value}',
+            '=' * 60,
+        ]
+        for line in lines:
+            self.get_logger().info(line)
 
     # ── 回调 ──────────────────────────────────────────────────────────────
 
